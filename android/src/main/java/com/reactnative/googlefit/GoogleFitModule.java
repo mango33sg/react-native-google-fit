@@ -21,16 +21,15 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.LifecycleEventListener;
+
 import com.facebook.react.uimanager.IllegalViewOperationException;
 
 
-public class GoogleFitModule extends ReactContextBaseJavaModule implements
-        LifecycleEventListener {
+public class GoogleFitModule extends ReactContextBaseJavaModule {
 
     private static final String REACT_MODULE = "RNGoogleFit";
     private ReactContext mReactContext;
-    private GoogleFitManager mGoogleFitManager = null;
+    private GoogleFitManager googleFitManager = null;
     private String GOOGLE_FIT_APP_URI = "com.google.android.apps.fitness";
 
     public GoogleFitModule(ReactApplicationContext reactContext) {
@@ -45,59 +44,37 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
         return REACT_MODULE;
     }
 
-    @Override
-    public void initialize() {
-        super.initialize();
-
-        getReactApplicationContext().addLifecycleEventListener(this);
-    }
-
-    @Override
-    public void onHostResume() {
-        if (mGoogleFitManager != null) {
-            mGoogleFitManager.resetAuthInProgress();
-        }
-    }
-
-    @Override
-    public void onHostPause() {
-    }
-
-    @Override
-    public void onHostDestroy() {
-    }
-
     @ReactMethod
     public void authorize(Callback error, Callback success) {
         final Activity activity = getCurrentActivity();
 
-        if (mGoogleFitManager == null) {
-            mGoogleFitManager = new GoogleFitManager(mReactContext, activity);
+        if (googleFitManager == null) {
+            googleFitManager = new GoogleFitManager(mReactContext, activity);
         }
 
-        if (mGoogleFitManager.isAuthorize()) {
+        if (googleFitManager.isAuthorize()) {
             WritableMap map = Arguments.createMap();
             map.putBoolean("authorized", true);
             success.invoke(map);
             return;
         }
 
-        mGoogleFitManager.authorize(error, success);
+        googleFitManager.authorize(error, success);
     }
 
     @ReactMethod
     public void observeSteps() {
-        mGoogleFitManager.getStepCounter().findFitnessDataSources();
+        googleFitManager.getStepCounter().findFitnessDataSources();
     }
 
     @ReactMethod
     public void getDailySteps(double startDay, double endDay) {
-        mGoogleFitManager.getStepHistory().displayLastWeeksData((long)startDay, (long)endDay);
+        googleFitManager.getStepHistory().displayLastWeeksData((long)startDay, (long)endDay);
     }
 
     @ReactMethod
     public void getWeeklySteps(double startDate, double endDate) {
-        mGoogleFitManager.getStepHistory().displayLastWeeksData((long)startDate, (long)endDate);
+        googleFitManager.getStepHistory().displayLastWeeksData((long)startDate, (long)endDate);
     }
 
     @ReactMethod
@@ -107,7 +84,7 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
                                  Callback successCallback) {
 
         try {
-            successCallback.invoke(mGoogleFitManager.getStepHistory().aggregateDataByDate((long)startDate, (long)endDate));
+            successCallback.invoke(googleFitManager.getStepHistory().aggregateDataByDate((long)startDate, (long)endDate));
         } catch (IllegalViewOperationException e) {
             errorCallback.invoke(e.getMessage());
         }
@@ -120,7 +97,7 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
                                  Callback successCallback) {
 
         try {
-            successCallback.invoke(mGoogleFitManager.getDistanceHistory().aggregateDataByDate((long)startDate, (long)endDate));
+            successCallback.invoke(googleFitManager.getDistanceHistory().aggregateDataByDate((long)startDate, (long)endDate));
         } catch (IllegalViewOperationException e) {
             errorCallback.invoke(e.getMessage());
         }
@@ -133,7 +110,7 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
                                  Callback successCallback) {
 
         try {
-            successCallback.invoke(mGoogleFitManager.getWeightsHistory().displayLastWeeksData((long)startDate, (long)endDate));
+            successCallback.invoke(googleFitManager.getWeightsHistory().displayLastWeeksData((long)startDate, (long)endDate));
         } catch (IllegalViewOperationException e) {
             errorCallback.invoke(e.getMessage());
         }
@@ -145,7 +122,7 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
                            Callback successCallback) {
 
         try {
-            successCallback.invoke(mGoogleFitManager.getWeightsHistory().saveWeight(weightSample));
+            successCallback.invoke(googleFitManager.getWeightsHistory().saveWeight(weightSample));
         } catch (IllegalViewOperationException e) {
             errorCallback.invoke(e.getMessage());
         }
@@ -154,7 +131,7 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
     @ReactMethod
     public void deleteWeight(ReadableMap weightSample, Callback errorCallback, Callback successCallback) {
         try {
-            successCallback.invoke(mGoogleFitManager.getWeightsHistory().deleteWeight(weightSample));
+            successCallback.invoke(googleFitManager.getWeightsHistory().deleteWeight(weightSample));
         } catch (IllegalViewOperationException e) {
             errorCallback.invoke(e.getMessage());
         }
@@ -189,10 +166,10 @@ public class GoogleFitModule extends ReactContextBaseJavaModule implements
     }
 
     private boolean isEnabledCheck() {
-        if (mGoogleFitManager == null) {
-            mGoogleFitManager = new GoogleFitManager(mReactContext, getCurrentActivity());
+        if (googleFitManager == null) {
+            googleFitManager = new GoogleFitManager(mReactContext, getCurrentActivity());
         }
-        return mGoogleFitManager.isAuthorize();
+        return googleFitManager.isAuthorize();
     }
 
 }
