@@ -30,6 +30,7 @@ import com.google.android.gms.fitness.data.Field;
 import com.google.android.gms.fitness.request.DataDeleteRequest;
 import com.google.android.gms.fitness.request.DataReadRequest;
 import com.google.android.gms.fitness.result.DataReadResult;
+import com.google.android.gms.fitness.data.Device;
 
 import java.text.DateFormat;
 import java.text.Format;
@@ -45,7 +46,7 @@ public class WeightsHistory {
     private GoogleFitManager googleFitManager;
     private DataSet WeightsDataset;
 
-    private static final String TAG = "Weights History";
+    private static final String TAG = "RNGoogleFit";
 
     public WeightsHistory(ReactContext reactContext, GoogleFitManager googleFitManager){
         this.mReactContext = reactContext;
@@ -54,43 +55,122 @@ public class WeightsHistory {
 
     public ReadableArray displayLastWeeksData(long startTime, long endTime) {
         DateFormat dateFormat = DateFormat.getDateInstance();
-        //Log.i(TAG, "Range Start: " + dateFormat.format(startTime));
-        //Log.i(TAG, "Range End: " + dateFormat.format(endTime));
 
-        //Check how many steps were walked and recorded in the last 7 days
-        DataReadRequest readRequest = new DataReadRequest.Builder()
-                .aggregate(DataType.TYPE_WEIGHT, DataType.AGGREGATE_WEIGHT_SUMMARY)
-                .bucketByTime(1, TimeUnit.DAYS)
-                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+        Log.i(TAG, "[WEIGHT] Range Start: " + dateFormat.format(startTime));
+        Log.i(TAG, "[WEIGHT] Range End: " + dateFormat.format(endTime));
+
+        WritableArray results = Arguments.createArray();
+
+        DataSource dataSource = new DataSource.Builder()
+                .setAppPackageName("com.xiaomi.hm.health")
+                .setDataType(DataType.TYPE_WEIGHT)
+                .setType(DataSource.TYPE_RAW)
+                .setStreamName("")
                 .build();
 
+        WritableMap source = Arguments.createMap();
+        DataType type = dataSource.getDataType();
+        Device device = dataSource.getDevice();
+
+            Log.i(TAG, "DataSource:");
+
+            Log.i(TAG, "  + StreamID  : " + dataSource.getStreamIdentifier());
+            source.putString("id", dataSource.getStreamIdentifier());
+
+            if (dataSource.getAppPackageName() != null) {
+                source.putString("appPackage", dataSource.getAppPackageName());
+            } else {
+                source.putNull("appPackage");
+            }
+
+            if (dataSource.getName() != null) {
+                source.putString("name", dataSource.getName());
+            } else {
+                source.putNull("name");
+            }
+
+            if (dataSource.getStreamName() != null) {
+                source.putString("stream", dataSource.getStreamName());
+            } else {
+                source.putNull("stream");
+            }
+
+            Log.i(TAG, "  + Type      : " + type);
+            source.putString("type", type.getName());
+
+            Log.i(TAG, "  + Device    : " + device);
+            if (device != null) {
+                source.putString("deviceManufacturer", device.getManufacturer());
+                source.putString("deviceModel", device.getModel());
+                switch(device.getType()) {
+                    case Device.TYPE_CHEST_STRAP:
+                        source.putString("deviceType", "chestStrap"); break;
+                }
+            } else {
+                source.putNull("deviceManufacturer");
+                source.putNull("deviceModel");
+                source.putNull("deviceType");
+            }
+
+        // DataReadRequest readRequest = new DataReadRequest.Builder()
+        //         .aggregate(DataType.TYPE_WEIGHT, DataType.AGGREGATE_WEIGHT_SUMMARY)
+        //         .bucketByTime(1, TimeUnit.DAYS)
+        //         .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+        //         .build();
+
+        DataReadRequest readRequest;
+        List<DataType> aggregateDataTypeList = DataType.getAggregatesForInput(type);
+
+        if (aggregateDataTypeList.size() > 0) {
+            DataType aggregateType = aggregateDataTypeList.get(0);
+            Log.i(TAG, "[WEIGHT]  + Aggregate : " + aggregateType);
+
+            //Check how many steps were walked and recorded in specified days
+            readRequest = new DataReadRequest.Builder()
+                    .aggregate(dataSource
+                        //DataType.TYPE_STEP_COUNT_DELTA
+                        ,
+                        //DataType.AGGREGATE_STEP_COUNT_DELTA
+                        aggregateType)
+                    .bucketByTime(1, TimeUnit.DAYS)
+                    .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                    .build();
+        } else {
+            readRequest = new DataReadRequest.Builder()
+                    .read(dataSource)
+                    //.bucketByTime(1, TimeUnit.DAYS)
+                    .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                    .build();
+        }
 
         DataReadResult dataReadResult = Fitness.HistoryApi.readData(googleFitManager.getGoogleApiClient(), readRequest).await(1, TimeUnit.MINUTES);
 
-
-        WritableArray map = Arguments.createArray();
+        WritableArray rawdata = Arguments.createArray();
 
         //Used for aggregated data
         if (dataReadResult.getBuckets().size() > 0) {
-            //Log.i(TAG, "Number of buckets: " + dataReadResult.getBuckets().size());
+            Log.i(TAG, "[WEIGHT]  +++ Number of buckets: " + dataReadResult.getBuckets().size());
             for (Bucket bucket : dataReadResult.getBuckets()) {
                 List<DataSet> dataSets = bucket.getDataSets();
                 for (DataSet dataSet : dataSets) {
-                    processDataSet(dataSet, map);
+                    processDataSet(dataSet, rawdata);
                 }
             }
         }
         //Used for non-aggregated data
         else if (dataReadResult.getDataSets().size() > 0) {
-            //Log.i(TAG, "Number of returned DataSets: " + dataReadResult.getDataSets().size());
+            Log.i(TAG, "[WEIGHT]  +++ Number of returned DataSets: " + dataReadResult.getDataSets().size());
             for (DataSet dataSet : dataReadResult.getDataSets()) {
-                processDataSet(dataSet, map);
+                processDataSet(dataSet, rawdata);
             }
         }
 
-        //Log.i("Returnable", map.toString());
+        WritableMap map = Arguments.createMap();
+        map.putMap("source", source);
+        map.putArray("weight", rawdata);
+        results.pushMap(map);
 
-        return map;
+        return results;
     }
 
     public boolean saveWeight(ReadableMap weightSample) {

@@ -186,17 +186,22 @@ class RNGoogleFit {
         },
         (res) => {
             if (res.length>0) {
-                res = res.map((el) => {
-                    if (el.value) {
-                    if (options.unit === 'pound') {
-                        el.value = this.KgToLbs(el.value); //convert back to pounds
-                    }
-                    el.startDate = new Date(el.startDate).toISOString();
-                    el.endDate = new Date(el.endDate).toISOString();
-                    return el;
-                }
-            });
-                callback(false, res.filter(day => day != undefined));
+                callback(false, res.map(function(dev) {
+                        let obj = {};
+                        obj.source = dev.source.appPackage + ((dev.source.stream) ? ":" + dev.source.stream : "");
+                        obj.weight = dev.weight.map((el) => {
+                          if (el.value) {
+                          if (options.unit === 'pound') {
+                              el.value = this.KgToLbs(el.value); //convert back to pounds
+                          }
+                          el.startDate = new Date(el.startDate).toISOString();
+                          el.endDate = new Date(el.endDate).toISOString();
+                          return el;
+                          }
+                        }).filter(day => day != undefined);
+                        return obj;
+                    }, this)
+                );
             } else {
                 callback("There is no any weight data for this period", false);
             }
