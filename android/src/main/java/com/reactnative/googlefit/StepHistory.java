@@ -87,6 +87,17 @@ public class StepHistory {
                 .build()
         );
 
+        // Fitness:
+        // "raw:com.google.step_count.delta:com.google.android.apps.fitness:user_input"
+        dataSources.add(
+            new DataSource.Builder()
+                .setAppPackageName("com.google.android.apps.fitness")
+                .setDataType(DataType.TYPE_STEP_COUNT_DELTA)
+                .setType(DataSource.TYPE_RAW)
+                .setStreamName("user_input")
+                .build()
+        );
+
         // Mi Fit
         dataSources.add(
             new DataSource.Builder()
