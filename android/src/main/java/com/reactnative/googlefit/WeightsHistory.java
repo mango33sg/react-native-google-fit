@@ -173,6 +173,57 @@ public class WeightsHistory {
         return results;
     }
 
+    public ReadableArray displayLastWeeksData2(long startTime, long endTime) {
+        DateFormat dateFormat = DateFormat.getDateInstance();
+
+        Log.i(TAG, "[WEIGHT2] Range Start: " + dateFormat.format(startTime));
+        Log.i(TAG, "[WEIGHT2] Range End: " + dateFormat.format(endTime));
+
+        WritableArray results = Arguments.createArray();
+
+        //Check how many steps were walked and recorded in the last 7 days
+        DataReadRequest readRequest = new DataReadRequest.Builder()
+                .aggregate(DataType.TYPE_WEIGHT, DataType.AGGREGATE_WEIGHT_SUMMARY)
+                .bucketByTime(1, TimeUnit.DAYS)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build();
+        
+        WritableMap source = Arguments.createMap();
+        source.putString("name", DataType.AGGREGATE_WEIGHT_SUMMARY.toString());
+
+        DataReadResult dataReadResult = Fitness.HistoryApi.readData(
+            googleFitManager.getGoogleApiClient(), readRequest).await(1, TimeUnit.MINUTES);
+
+        WritableArray rawdata = Arguments.createArray();
+
+        //Used for aggregated data
+        if (dataReadResult.getBuckets().size() > 0) {
+            Log.i(TAG, "[WEIGHT2]  +++ Number of buckets: " + dataReadResult.getBuckets().size());
+            for (Bucket bucket : dataReadResult.getBuckets()) {
+                List<DataSet> dataSets = bucket.getDataSets();
+                for (DataSet dataSet : dataSets) {
+                    processDataSet(dataSet, rawdata);
+                }
+            }
+        }
+
+        //Used for non-aggregated data
+        else if (dataReadResult.getDataSets().size() > 0) {
+            Log.i(TAG, "[WEIGHT2]  +++ Number of returned DataSets: " + dataReadResult.getDataSets().size());
+            for (DataSet dataSet : dataReadResult.getDataSets()) {
+                processDataSet(dataSet, rawdata);
+            }
+        }
+
+        WritableMap map = Arguments.createMap();
+
+        map.putMap("source", source);
+        map.putArray("weight", rawdata);
+        results.pushMap(map);
+
+        return results;
+    }
+
     public boolean saveWeight(ReadableMap weightSample) {
         this.WeightsDataset = createDataForRequest(
                 DataType.TYPE_WEIGHT,    // for height, it would be DataType.TYPE_HEIGHT

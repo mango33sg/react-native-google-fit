@@ -140,6 +140,18 @@ LifecycleEventListener {
         }
     }
     
+    @ReactMethod
+    public void getWeightSamples2(double startDate,
+                                 double endDate,
+                                 Callback errorCallback,
+                                 Callback successCallback) {
+        
+        try {
+            successCallback.invoke(mGoogleFitManager.getWeightsHistory().displayLastWeeksData2((long)startDate, (long)endDate));
+        } catch (IllegalViewOperationException e) {
+            errorCallback.invoke(e.getMessage());
+        }
+    } 
     
     @ReactMethod
     public void getDailyCalorieSamples(double startDate,
