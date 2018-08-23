@@ -217,10 +217,11 @@ class RNGoogleFit {
             callback(msg, false);
         },
         (res) => {
+            // console.warn(JSON.stringify(res));
             if (res.length>0) {
                 callback(false, res.map(function(dev) {
                         let obj = {};
-                        obj.source = dev.name;
+                        obj.source = dev.source.name;
                         obj.weight = dev.weight.map((el) => {
                           if (el.value) {
                           if (options.unit === 'pound') {
